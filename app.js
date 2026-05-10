@@ -1,4 +1,6 @@
-const STORAGE_KEY = "topik-words-state-v2";
+const STORAGE_KEY = "topik-words-state-v3";
+const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
+const PROGRESS_SCHEMA_VERSION = 1;
 const MAX_FAMILIARITY = 5;
 const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
 
@@ -9,6 +11,7 @@ const state = {
   search: "",
   favorites: new Set(),
   progress: {},
+  progressSchemaVersion: PROGRESS_SCHEMA_VERSION,
   speech: {
     voices: [],
     initialized: false
@@ -80,7 +83,7 @@ async function init() {
 
 function restoreState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || readLegacyState();
     if (!raw) return;
 
     const saved = JSON.parse(raw);
@@ -89,9 +92,49 @@ function restoreState() {
     state.search = saved.search || "";
     state.favorites = new Set(saved.favorites || []);
     state.progress = saved.progress || {};
+    state.progressSchemaVersion = saved.progressSchemaVersion || 0;
+    migrateProgressState();
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
+}
+
+function readLegacyState() {
+  for (const key of LEGACY_STORAGE_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function migrateProgressState() {
+  if (!state.progress || typeof state.progress !== "object") {
+    state.progress = {};
+  }
+
+  for (const [wordId, progress] of Object.entries(state.progress)) {
+    state.progress[wordId] = migrateSingleProgress(progress);
+  }
+
+  state.progressSchemaVersion = PROGRESS_SCHEMA_VERSION;
+}
+
+function migrateSingleProgress(progress) {
+  const base = createEmptyProgress();
+  if (!progress || typeof progress !== "object") {
+    return base;
+  }
+
+  return {
+    familiarity: Number.isFinite(progress.familiarity) ? progress.familiarity : base.familiarity,
+    correctCount: Number.isFinite(progress.correctCount) ? progress.correctCount : base.correctCount,
+    wrongCount: Number.isFinite(progress.wrongCount) ? progress.wrongCount : base.wrongCount,
+    reviewCount: Number.isFinite(progress.reviewCount) ? progress.reviewCount : base.reviewCount,
+    lastReviewedAt: progress.lastReviewedAt || base.lastReviewedAt,
+    nextReviewAt: progress.nextReviewAt || base.nextReviewAt
+  };
 }
 
 function persistState() {
@@ -100,7 +143,8 @@ function persistState() {
     filter: state.filter,
     search: state.search,
     favorites: [...state.favorites],
-    progress: state.progress
+    progress: state.progress,
+    progressSchemaVersion: state.progressSchemaVersion
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
 }
@@ -155,6 +199,14 @@ async function loadWords() {
 }
 
 function normalizeProgress() {
+  const validWordIds = new Set(state.words.map((word) => word.id));
+
+  for (const wordId of Object.keys(state.progress)) {
+    if (!validWordIds.has(wordId)) {
+      delete state.progress[wordId];
+    }
+  }
+
   state.words.forEach((word) => {
     if (!state.progress[word.id]) {
       state.progress[word.id] = createEmptyProgress();

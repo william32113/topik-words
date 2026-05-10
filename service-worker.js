@@ -1,4 +1,5 @@
-const CACHE_NAME = "topik-words-cache-v2";
+const APP_CACHE_VERSION = "2026-05-10-2";
+const CACHE_NAME = `topik-words-cache-${APP_CACHE_VERSION}`;
 const ASSETS = [
   "./",
   "./index.html",
