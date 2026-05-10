@@ -1,6 +1,6 @@
-# Learn Korean TOPIK App
+# Learn Korean TOPIK Web
 
-This repository includes a browser-based `PWA` version designed for personal use on iPhone without needing the App Store.
+This repository currently provides a browser-based `PWA` web version for personal use on iPhone without needing the App Store.
 
 ## Product Goal
 
@@ -16,7 +16,7 @@ Build a lightweight and pleasant TOPIK learning app that helps Chinese-speaking 
 ## Current PWA Features
 
 1. `TOPIK 1` to `TOPIK 6` level tabs
-2. Search by Korean, romanization, or Chinese meaning
+2. Search by Korean, pronunciation label, or Chinese meaning
 3. Word detail popup with example sentence
 4. Korean pronunciation using browser speech synthesis
 5. Favorites saved in local storage
@@ -51,24 +51,6 @@ Build a lightweight and pleasant TOPIK learning app that helps Chinese-speaking 
 - `ios-app/TopikWord/`
   - earlier SwiftUI starter files if you later move to native iOS
 
-## Run Locally On Windows
-
-Because browsers block some local file features, use a tiny local server.
-
-### Option 1: Python
-
-```bash
-python -m http.server 8080
-```
-
-Then open:
-
-`http://localhost:8080`
-
-### Option 2: VS Code Live Server
-
-Open the folder in VS Code and run Live Server.
-
 ## Use On iPhone
 
 1. Put the project on a reachable web host or your local network.
@@ -77,6 +59,11 @@ Open the folder in VS Code and run Live Server.
 4. Tap `Add to Home Screen`.
 5. Launch it like a normal app icon.
 
-## Later Native Upgrade
+## Future Features
 
-If you later get access to a Mac, you can still reuse the vocabulary/content plan and move toward the SwiftUI starter under `ios-app/TopikWord/`.
+- fuller `TOPIK 1` meaning review and cleanup
+- `TOPIK 2` vocabulary import
+- better pronunciation coverage for sound-change cases
+- progress export and import
+- richer review scheduling
+- native iOS app as a future feature
