@@ -45,6 +45,9 @@ function getAvailableLevels() {
 }
 
 const els = {
+  updateBanner: document.querySelector("#updateBanner"),
+  updateBannerText: document.querySelector("#updateBannerText"),
+  applyUpdate: document.querySelector("#applyUpdate"),
   wordCount: document.querySelector("#wordCount"),
   dueCount: document.querySelector("#dueCount"),
   masteredCount: document.querySelector("#masteredCount"),
@@ -64,6 +67,9 @@ const els = {
   closeOverlay: document.querySelector("#closeOverlay"),
   wordCardTemplate: document.querySelector("#wordCardTemplate")
 };
+
+let waitingServiceWorker = null;
+let refreshingForUpdate = false;
 
 async function init() {
   restoreState();
@@ -190,6 +196,8 @@ function bindEvents() {
     },
     { once: true }
   );
+
+  els.applyUpdate.addEventListener("click", applyPendingUpdate);
 }
 
 async function loadWords() {
@@ -785,9 +793,47 @@ function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("service-worker.js")
-      .then((registration) => registration.update())
+      .then((registration) => {
+        if (registration.waiting) {
+          promptForUpdate(registration.waiting);
+        }
+
+        registration.addEventListener("updatefound", () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+
+          installingWorker.addEventListener("statechange", () => {
+            if (
+              installingWorker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              promptForUpdate(installingWorker);
+            }
+          });
+        });
+
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (refreshingForUpdate) return;
+          refreshingForUpdate = true;
+          window.location.reload();
+        });
+
+        return registration.update();
+      })
       .catch(() => {});
   }
+}
+
+function promptForUpdate(worker) {
+  waitingServiceWorker = worker;
+  els.updateBannerText.textContent = "有新版本可更新，按一下就會切換到最新版。";
+  els.updateBanner.classList.remove("hidden");
+}
+
+function applyPendingUpdate() {
+  if (!waitingServiceWorker) return;
+  els.updateBannerText.textContent = "正在更新到最新版...";
+  waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
 }
 
 init().catch(() => {

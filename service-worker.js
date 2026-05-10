@@ -1,4 +1,4 @@
-const APP_CACHE_VERSION = "2026-05-10-2";
+const APP_CACHE_VERSION = "2026-05-10-3";
 const CACHE_NAME = `topik-words-cache-${APP_CACHE_VERSION}`;
 const ASSETS = [
   "./",
@@ -33,6 +33,12 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
