@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f3efe5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="TOPIK Words" />
+    <title>TOPIK Words</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/icon-192.svg" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Korean Study Companion</p>
+          <h1>輕鬆學 TOPIK 單字</h1>
+          <p class="hero-text">
+            依等級學單字、聽韓文發音、看例句、收藏難字，再用抽認卡和小測驗慢慢記住。
+          </p>
+        </div>
+        <div class="hero-stats">
+          <article class="hero-stat">
+            <span id="wordCount">0</span>
+            <small>已載入單字</small>
+          </article>
+          <article class="hero-stat">
+            <span id="dueCount">0</span>
+            <small>待複習字卡</small>
+          </article>
+          <article class="hero-stat">
+            <span id="masteredCount">0</span>
+            <small>熟悉字卡</small>
+          </article>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls-panel">
+          <div class="section-title">
+            <h2>今天怎麼學</h2>
+            <p>先選級數，再挑學習模式。進度會存在這台裝置的瀏覽器裡。</p>
+          </div>
+
+          <div class="levels" id="levelTabs" aria-label="TOPIK level selector"></div>
+
+          <label class="search-box">
+            <span>搜尋單字</span>
+            <input id="searchInput" type="search" placeholder="輸入韓文、羅馬拼音或中文意思" />
+          </label>
+
+          <div class="filters">
+            <button class="chip is-active" data-filter="all" type="button">全部</button>
+            <button class="chip" data-filter="favorites" type="button">只看收藏</button>
+            <button class="chip" data-filter="review" type="button">待複習</button>
+          </div>
+
+          <div class="modes">
+            <button id="openFlashcard" class="mode-card" type="button">
+              <strong>抽認卡</strong>
+              <span>看單字再翻面，順手標記熟悉度。</span>
+            </button>
+            <button id="openQuiz" class="mode-card" type="button">
+              <strong>小測驗</strong>
+              <span>快速測中文意思，自動記錄答對答錯。</span>
+            </button>
+            <button id="openReview" class="mode-card mode-card-accent" type="button">
+              <strong>重複練習</strong>
+              <span>只練目前需要回來複習的字卡。</span>
+            </button>
+          </div>
+
+          <section class="progress-panel">
+            <h3>本機學習進度</h3>
+            <dl class="progress-grid">
+              <div>
+                <dt>收藏</dt>
+                <dd id="favoriteCount">0</dd>
+              </div>
+              <div>
+                <dt>已練習</dt>
+                <dd id="reviewedCount">0</dd>
+              </div>
+              <div>
+                <dt>上次級數</dt>
+                <dd id="currentLevelLabel">TOPIK 1</dd>
+              </div>
+              <div>
+                <dt>下次建議</dt>
+                <dd id="nextStepLabel">先選單字</dd>
+              </div>
+            </dl>
+          </section>
+        </section>
+
+        <section class="panel word-panel">
+          <div class="section-title">
+            <h2>單字清單</h2>
+            <p id="listSummary">載入中...</p>
+          </div>
+          <div id="wordList" class="word-list" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="overlay" class="overlay hidden" aria-hidden="true">
+      <section class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
+        <button id="closeOverlay" class="icon-button dialog-close" type="button" aria-label="Close">×</button>
+        <div id="overlayContent"></div>
+      </section>
+    </div>
+
+    <template id="wordCardTemplate">
+      <article class="word-card">
+        <div class="word-main">
+          <div>
+            <p class="word-level"></p>
+            <h3 class="word-korean"></h3>
+            <p class="word-romanization"></p>
+          </div>
+          <button class="icon-button favorite-button" type="button" aria-label="Toggle favorite">♡</button>
+        </div>
+        <p class="word-meaning"></p>
+        <div class="word-meta-row">
+          <span class="word-score"></span>
+          <span class="word-review-state"></span>
+        </div>
+        <div class="word-actions">
+          <button class="ghost-button pronounce-button" type="button">發音</button>
+          <button class="ghost-button detail-button" type="button">查看例句</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "topik1-001",
+    "level": "topik1",
+    "korean": "가방",
+    "romanization": "gabang",
+    "chineseMeaning": "包包",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "가방 안에 책이 있어요.",
+    "exampleChinese": "包包裡有書。",
+    "tags": ["daily-life", "noun"]
+  },
+  {
+    "id": "topik1-002",
+    "level": "topik1",
+    "korean": "학교",
+    "romanization": "hakgyo",
+    "chineseMeaning": "學校",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "저는 학교에 갑니다.",
+    "exampleChinese": "我去學校。",
+    "tags": ["education", "noun"]
+  },
+  {
+    "id": "topik1-003",
+    "level": "topik1",
+    "korean": "물",
+    "romanization": "mul",
+    "chineseMeaning": "水",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "물을 많이 마셔요.",
+    "exampleChinese": "我要多喝水。",
+    "tags": ["daily-life", "noun"]
+  },
+  {
+    "id": "topik1-004",
+    "level": "topik1",
+    "korean": "먹다",
+    "romanization": "meokda",
+    "chineseMeaning": "吃",
+    "partOfSpeech": "動詞",
+    "exampleKorean": "저는 김밥을 먹어요.",
+    "exampleChinese": "我吃紫菜飯捲。",
+    "tags": ["food", "verb"]
+  },
+  {
+    "id": "topik2-001",
+    "level": "topik2",
+    "korean": "준비하다",
+    "romanization": "junbihada",
+    "chineseMeaning": "準備",
+    "partOfSpeech": "動詞",
+    "exampleKorean": "시험을 열심히 준비해요.",
+    "exampleChinese": "我很認真準備考試。",
+    "tags": ["verb", "study"]
+  },
+  {
+    "id": "topik2-002",
+    "level": "topik2",
+    "korean": "약속",
+    "romanization": "yaksok",
+    "chineseMeaning": "約定",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "친구와 저녁 약속이 있어요.",
+    "exampleChinese": "我和朋友有晚餐約。",
+    "tags": ["social", "noun"]
+  },
+  {
+    "id": "topik3-001",
+    "level": "topik3",
+    "korean": "경험",
+    "romanization": "gyeongheom",
+    "chineseMeaning": "經驗",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "좋은 경험이 되었어요.",
+    "exampleChinese": "成了很好的經驗。",
+    "tags": ["abstract", "noun"]
+  },
+  {
+    "id": "topik4-001",
+    "level": "topik4",
+    "korean": "해결하다",
+    "romanization": "haegyeolhada",
+    "chineseMeaning": "解決",
+    "partOfSpeech": "動詞",
+    "exampleKorean": "문제를 빨리 해결해야 해요.",
+    "exampleChinese": "必須快點解決問題。",
+    "tags": ["work", "verb"]
+  },
+  {
+    "id": "topik5-001",
+    "level": "topik5",
+    "korean": "정확하다",
+    "romanization": "jeonghwakhada",
+    "chineseMeaning": "準確",
+    "partOfSpeech": "形容詞",
+    "exampleKorean": "정확한 정보가 필요합니다.",
+    "exampleChinese": "需要準確的資訊。",
+    "tags": ["adjective", "formal"]
+  },
+  {
+    "id": "topik6-001",
+    "level": "topik6",
+    "korean": "관점",
+    "romanization": "gwanjeom",
+    "chineseMeaning": "觀點",
+    "partOfSpeech": "名詞",
+    "exampleKorean": "다양한 관점에서 생각해 봅시다.",
+    "exampleChinese": "我們從多元觀點來思考吧。",
+    "tags": ["advanced", "noun"]
+  }
+]

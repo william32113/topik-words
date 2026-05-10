@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff3da"/>
+      <stop offset="100%" stop-color="#d8f0df"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <circle cx="96" cy="96" r="58" fill="#0c7c59" opacity="0.14"/>
+  <path d="M60 64h72a12 12 0 0 1 12 12v40a12 12 0 0 1-12 12H60a12 12 0 0 1-12-12V76a12 12 0 0 1 12-12Z" fill="#fffaf0" stroke="#0c7c59" stroke-width="6"/>
+  <path d="M70 54c0-10 8-18 18-18h16c10 0 18 8 18 18" fill="none" stroke="#dc8d40" stroke-width="8" stroke-linecap="round"/>
+  <text x="96" y="104" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" fill="#0c7c59" font-weight="700">한</text>
+</svg>
