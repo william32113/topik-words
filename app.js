@@ -36,6 +36,11 @@ const levelLabels = {
   topik6: "TOPIK 6"
 };
 
+function getAvailableLevels() {
+  const discovered = [...new Set(state.words.map((word) => word.level))];
+  return discovered.length ? discovered : Object.keys(levelLabels);
+}
+
 const els = {
   wordCount: document.querySelector("#wordCount"),
   dueCount: document.querySelector("#dueCount"),
@@ -62,6 +67,9 @@ async function init() {
   bindEvents();
   await loadWords();
   normalizeProgress();
+  if (!getAvailableLevels().includes(state.selectedLevel)) {
+    state.selectedLevel = getAvailableLevels()[0];
+  }
   setupSpeechSynthesis();
   renderLevelTabs();
   renderFilters();
@@ -176,7 +184,8 @@ function getProgress(wordId) {
 function renderLevelTabs() {
   els.levelTabs.innerHTML = "";
 
-  Object.entries(levelLabels).forEach(([level, label]) => {
+  getAvailableLevels().forEach((level) => {
+    const label = levelLabels[level] || level.toUpperCase();
     const button = document.createElement("button");
     button.className = `level-tab${state.selectedLevel === level ? " is-active" : ""}`;
     button.textContent = label;
@@ -224,7 +233,7 @@ function getVisibleWords() {
       const query = state.search.toLowerCase();
       return (
         word.korean.toLowerCase().includes(query) ||
-        word.romanization.toLowerCase().includes(query) ||
+        (word.pronunciation || "").toLowerCase().includes(query) ||
         word.chineseMeaning.toLowerCase().includes(query)
       );
     });
@@ -248,7 +257,7 @@ function renderWordList() {
     const fragment = els.wordCardTemplate.content.cloneNode(true);
     const level = fragment.querySelector(".word-level");
     const korean = fragment.querySelector(".word-korean");
-    const romanization = fragment.querySelector(".word-romanization");
+    const pronunciation = fragment.querySelector(".word-pronunciation");
     const meaning = fragment.querySelector(".word-meaning");
     const score = fragment.querySelector(".word-score");
     const reviewState = fragment.querySelector(".word-review-state");
@@ -258,7 +267,7 @@ function renderWordList() {
 
     level.textContent = levelLabels[word.level];
     korean.textContent = word.korean;
-    romanization.textContent = word.romanization;
+    pronunciation.textContent = word.pronunciation || "";
     meaning.textContent = word.chineseMeaning;
     score.textContent = `熟悉度 ${progress.familiarity}/${MAX_FAMILIARITY}`;
     reviewState.textContent = formatReviewState(progress);
@@ -292,7 +301,7 @@ function openDetail(word) {
     <header class="detail-header">
       <p class="word-level">${levelLabels[word.level]}</p>
       <h2 id="overlayTitle" class="detail-korean">${word.korean}</h2>
-      <p class="detail-meta">${word.romanization} ・ ${word.partOfSpeech}</p>
+      <p class="detail-meta">${[word.pronunciation, word.partOfSpeech].filter(Boolean).join(" ・ ")}</p>
       <p class="detail-meaning">${word.chineseMeaning}</p>
     </header>
     <div class="detail-actions">
@@ -391,7 +400,7 @@ function renderFlashcards() {
       <section class="flashcard">
         <div>
           <h3>${word.korean}</h3>
-          <p>${word.romanization}</p>
+          <p>${word.pronunciation || ""}</p>
           <p>${revealed ? word.chineseMeaning : "先想一下意思，再按下方按鈕揭曉。"}</p>
           <p class="helper-text">目前熟悉度 ${progress.familiarity}/${MAX_FAMILIARITY}</p>
         </div>
@@ -487,7 +496,7 @@ function renderQuiz() {
       <section class="flashcard">
         <div>
           <h3>${word.korean}</h3>
-          <p>${word.romanization}</p>
+          <p>${word.pronunciation || ""}</p>
           <p>請選出正確的中文意思。</p>
         </div>
       </section>

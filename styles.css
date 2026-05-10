@@ -286,7 +286,7 @@ button {
 }
 
 .word-level,
-.word-romanization,
+.word-pronunciation,
 .word-meta-row,
 .detail-meta,
 .detail-example,
@@ -309,7 +309,7 @@ button {
   font-size: 1.5rem;
 }
 
-.word-romanization,
+.word-pronunciation,
 .word-meaning {
   margin: 0;
 }
