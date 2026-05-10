@@ -9,6 +9,10 @@ const state = {
   search: "",
   favorites: new Set(),
   progress: {},
+  speech: {
+    voices: [],
+    initialized: false
+  },
   flashcards: {
     mode: "all",
     deck: [],
@@ -58,6 +62,7 @@ async function init() {
   bindEvents();
   await loadWords();
   normalizeProgress();
+  setupSpeechSynthesis();
   renderLevelTabs();
   renderFilters();
   renderDashboard();
@@ -125,6 +130,14 @@ function bindEvents() {
       closeOverlay();
     }
   });
+
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      primeSpeechSynthesis();
+    },
+    { once: true }
+  );
 }
 
 async function loadWords() {
@@ -603,25 +616,91 @@ function closeOverlay() {
   document.body.style.overflow = "";
 }
 
-function speak(text) {
+function setupSpeechSynthesis() {
+  if (!("speechSynthesis" in window)) return;
+
+  loadVoices();
+
+  if (typeof window.speechSynthesis.addEventListener === "function") {
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+  } else {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
+function loadVoices() {
+  if (!("speechSynthesis" in window)) return [];
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length) {
+    state.speech.voices = voices;
+  }
+  return state.speech.voices;
+}
+
+function primeSpeechSynthesis() {
+  if (!("speechSynthesis" in window) || state.speech.initialized) return;
+
+  state.speech.initialized = true;
+
+  try {
+    window.speechSynthesis.resume();
+    const warmup = new SpeechSynthesisUtterance("");
+    warmup.volume = 0;
+    window.speechSynthesis.speak(warmup);
+    window.speechSynthesis.cancel();
+  } catch {
+    state.speech.initialized = false;
+  }
+}
+
+function getPreferredKoreanVoice() {
+  const voices = loadVoices();
+  return (
+    voices.find((voice) => voice.lang === "ko-KR") ||
+    voices.find((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ko")) ||
+    null
+  );
+}
+
+function speak(text, attempt = 0) {
   if (!("speechSynthesis" in window)) {
     alert("這個瀏覽器目前不支援語音播放。");
     return;
   }
 
-  window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "ko-KR";
-  utterance.rate = 0.85;
+  const preferredVoice = getPreferredKoreanVoice();
 
-  const koreanVoice = window.speechSynthesis
-    .getVoices()
-    .find((voice) => voice.lang && voice.lang.toLowerCase().startsWith("ko"));
-  if (koreanVoice) {
-    utterance.voice = koreanVoice;
+  utterance.lang = preferredVoice?.lang || "ko-KR";
+  utterance.rate = 0.82;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
   }
 
-  window.speechSynthesis.speak(utterance);
+  utterance.onerror = () => {
+    if (attempt < 1) {
+      window.setTimeout(() => speak(text, attempt + 1), 180);
+    } else {
+      alert("語音播放失敗，請再按一次試試看。");
+    }
+  };
+
+  try {
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
+    window.setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, attempt === 0 ? 40 : 0);
+  } catch {
+    if (attempt < 1) {
+      window.setTimeout(() => speak(text, attempt + 1), 180);
+    } else {
+      alert("語音播放失敗，請確認裝置語音功能可用。");
+    }
+  }
 }
 
 function shuffle(array) {
