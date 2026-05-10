@@ -48,8 +48,6 @@ Build a lightweight and pleasant TOPIK learning app that helps Chinese-speaking 
   - sample TOPIK vocabulary JSON
 - `docs/`
   - product notes
-- `ios-app/TopikWord/`
-  - earlier SwiftUI starter files if you later move to native iOS
 
 ## Use On iPhone
 
