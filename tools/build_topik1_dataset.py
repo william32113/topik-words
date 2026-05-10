@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import re
 import time
@@ -14,9 +15,21 @@ from deep_translator import GoogleTranslator
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "data" / "sample_topik_vocab.json"
-INDEX_URL = "https://www.koreantopik.com/2024/05/topik-1-vocabulary-list-1850-for.html"
+REFERENCE_TSV_PATH = ROOT / "results.tsv"
+REFERENCE_TSV_URL = "https://raw.githubusercontent.com/julienshim/combined_korean_vocabulary_list/master/results.tsv"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
-LEVEL = "topik1"
+
+LEVEL_CONFIGS = {
+    "topik1": {
+        "index_url": "https://www.koreantopik.com/2024/05/topik-1-vocabulary-list-1850-for.html",
+        "total_lessons": 18,
+    },
+    "topik2": {
+        "index_url": "https://www.koreantopik.com/2024/09/complete-topik-2-vocabulary-list-3900.html",
+        "total_lessons": 39,
+        "regex": r"https://www\\.koreantopik\\.com/\\d{4}/\\d{2}/(?:the-|3900-vocabulary-words-for-topik-2-with)[^\"\\s<]+",
+    },
+}
 
 CHOSEONG = [
     "ㄱ",
@@ -92,8 +105,6 @@ JONGSEONG = [
     "ㅍ",
     "ㅎ",
 ]
-ONSETS = set(CHOSEONG)
-
 CODA_TO_ONSET = {
     "ㄱ": "ㄱ",
     "ㄲ": "ㄲ",
@@ -191,6 +202,61 @@ PRONUNCIATION_OVERRIDES = {
     "못하다": "모타다",
     "몇": "멷",
 }
+PART_OF_SPEECH_MAP = {
+    "명사": "名詞",
+    "동사": "動詞",
+    "형용사": "形容詞",
+    "부사": "副詞",
+    "관형사": "冠形詞",
+    "대명사": "代名詞",
+    "수사": "數詞",
+    "조사": "助詞",
+    "감탄사": "感嘆詞",
+    "접사": "接辭",
+    "의존 명사": "依存名詞",
+    "보조 용언": "補助用言",
+}
+KOREAN_MEANING_OVERRIDES = {
+    "topik1": {
+        "가깝다": "近",
+        "감기": "感冒",
+        "가볍다": "輕",
+        "걷다": "走",
+        "가리키다": "指",
+        "갈아입다": "換",
+        "갈아타다": "轉乘",
+        "거실": "客廳",
+        "거울": "鏡子",
+        "경치": "景色",
+        "경기": "比賽",
+        "결혼식": "婚禮",
+        "걸리다": "掛住",
+        "가운데": "中間",
+        "가요": "歌謠",
+        "가위": "剪刀",
+        "가을": "秋天",
+        "각각": "各自",
+        "간식": "點心",
+        "간장": "醬油",
+        "갈색": "棕色",
+        "감사": "感謝",
+        "값": "價格",
+        "강": "江",
+        "강아지": "小狗",
+        "같이": "一起",
+        "거의": "幾乎",
+        "거짓말": "謊話",
+        "건강": "健康",
+        "건물": "建築物",
+        "검정": "黑色",
+        "것": "東西",
+        "게임": "遊戲",
+        "겨울": "冬天",
+        "계란": "雞蛋",
+        "계속": "持續",
+        "계절": "季節",
+    }
+}
 
 
 @dataclass
@@ -206,8 +272,52 @@ def fetch_html(url: str) -> str:
     return response.text
 
 
-def lesson_urls() -> list[str]:
-    soup = BeautifulSoup(fetch_html(INDEX_URL), "html5lib")
+def ensure_reference_tsv() -> None:
+    if REFERENCE_TSV_PATH.exists():
+        return
+    response = requests.get(REFERENCE_TSV_URL, timeout=60, headers=HEADERS)
+    response.raise_for_status()
+    REFERENCE_TSV_PATH.write_bytes(response.content)
+
+
+def normalize_whitespace(text: str) -> str:
+    return " ".join(text.replace("\xa0", " ").split())
+
+
+def normalize_korean_word(text: str) -> str:
+    return re.sub(r"\s+", "", normalize_whitespace(text))
+
+
+def chunked(values: list[str], size: int) -> Iterable[list[str]]:
+    for index in range(0, len(values), size):
+        yield values[index : index + size]
+
+
+def translate_batch(values: list[str], translator: GoogleTranslator) -> list[str]:
+    results: list[str] = []
+    separator = "\n@@\n"
+    for batch in chunked(values, 60):
+        payload = separator.join(batch)
+        translated = translator.translate(payload)
+        parts = [part.strip() for part in translated.split(separator)]
+        if len(parts) != len(batch):
+            parts = translator.translate_batch(batch)
+        results.extend(parts)
+        time.sleep(0.35)
+    return results
+
+
+def translate_unique(values: list[str], translator: GoogleTranslator) -> list[str]:
+    lookup: dict[str, str] = {}
+    unique_values = [value for value in dict.fromkeys(values) if value]
+    translated_unique = translate_batch(unique_values, translator)
+    for source, translated in zip(unique_values, translated_unique):
+        lookup[source] = translated
+    return [lookup.get(value, value) for value in values]
+
+
+def lesson_urls_topik1() -> list[str]:
+    soup = BeautifulSoup(fetch_html(LEVEL_CONFIGS["topik1"]["index_url"]), "html5lib")
     urls: list[str] = []
     for anchor in soup.find_all("a", href=True):
         text = anchor.get_text(" ", strip=True)
@@ -221,7 +331,22 @@ def lesson_urls() -> list[str]:
         if url not in seen:
             deduped.append(url)
             seen.add(url)
-    return deduped[:18]
+    return deduped[: LEVEL_CONFIGS["topik1"]["total_lessons"]]
+
+
+def lesson_urls_topik2() -> list[str]:
+    config = LEVEL_CONFIGS["topik2"]
+    html = fetch_html(config["index_url"])
+    urls = sorted(set(re.findall(config["regex"], html)))
+    return urls[: config["total_lessons"]]
+
+
+def lesson_urls(level: str) -> list[str]:
+    if level == "topik1":
+        return lesson_urls_topik1()
+    if level == "topik2":
+        return lesson_urls_topik2()
+    raise ValueError(f"Unsupported level: {level}")
 
 
 def parse_lesson(url: str) -> list[dict[str, str]]:
@@ -247,43 +372,32 @@ def parse_lesson(url: str) -> list[dict[str, str]]:
     return rows
 
 
-def normalize_korean_word(text: str) -> str:
-    text = normalize_whitespace(text)
-    return re.sub(r"\s+", "", text)
+def load_reference_entries() -> dict[str, list[dict[str, str]]]:
+    ensure_reference_tsv()
+    matches: dict[str, list[dict[str, str]]] = {}
+    with REFERENCE_TSV_PATH.open(encoding="utf-8") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        for row in reader:
+            word = normalize_korean_word(row["word"])
+            if not word:
+                continue
+            matches.setdefault(word, []).append(
+                {
+                    "part_of_speech": normalize_whitespace(row["part_of_speech"]),
+                    "explanation": normalize_whitespace(row["explanation"]),
+                    "topik_level": normalize_whitespace(row["topik_level"]),
+                }
+            )
+    return matches
 
 
-def normalize_whitespace(text: str) -> str:
-    return " ".join(text.replace("\xa0", " ").split())
-
-
-def chunked(values: list[str], size: int) -> Iterable[list[str]]:
-    for index in range(0, len(values), size):
-        yield values[index : index + size]
-
-
-def translate_batch(values: list[str], translator: GoogleTranslator) -> list[str]:
-    results: list[str] = []
-    separator = "\n@@\n"
-    for batch in chunked(values, 60):
-        payload = separator.join(batch)
-        translated = translator.translate(payload)
-        parts = [part.strip() for part in translated.split(separator)]
-        if len(parts) != len(batch):
-            fallback_parts = translator.translate_batch(batch)
-            results.extend(fallback_parts)
-        else:
-            results.extend(parts)
-        time.sleep(0.35)
-    return results
-
-
-def translate_unique(values: list[str], translator: GoogleTranslator) -> list[str]:
-    lookup: dict[str, str] = {}
-    unique_values = [value for value in dict.fromkeys(values) if value]
-    translated_unique = translate_batch(unique_values, translator)
-    for source, translated in zip(unique_values, translated_unique):
-        lookup[source] = translated
-    return [lookup.get(value, value) for value in values]
+def choose_part_of_speech(korean_word: str, reference_entries: dict[str, list[dict[str, str]]]) -> str:
+    entries = reference_entries.get(korean_word, [])
+    pos_candidates = {entry["part_of_speech"] for entry in entries if entry["part_of_speech"]}
+    if not pos_candidates:
+        return ""
+    preferred = sorted(pos_candidates, key=lambda value: 0 if value in PART_OF_SPEECH_MAP else 1)[0]
+    return PART_OF_SPEECH_MAP.get(preferred, preferred)
 
 
 def decompose_char(char: str) -> Syllable | None:
@@ -378,68 +492,12 @@ def pronunciation(word: str) -> str:
     return "".join(output)
 
 
-def build_entries() -> list[dict[str, object]]:
-    urls = lesson_urls()
-    if len(urls) != 18:
-        raise RuntimeError(f"Expected 18 lesson links, found {len(urls)}")
+def refine_chinese_meaning(level: str, korean: str, meaning_en: str, meaning_zh: str, example_en: str) -> str:
+    if korean in KOREAN_MEANING_OVERRIDES.get(level, {}):
+        return KOREAN_MEANING_OVERRIDES[level][korean]
 
-    rows: list[dict[str, str]] = []
-    for url in urls:
-        rows.extend(parse_lesson(url))
-        time.sleep(0.25)
-
-    translator = GoogleTranslator(source="en", target="zh-TW")
-    chinese_meanings = translate_unique([row["meaning_en"] for row in rows], translator)
-    example_chinese = translate_unique([row["example_en"] for row in rows], translator)
-
-    entries: list[dict[str, object]] = []
-    for index, (row, meaning_zh, example_zh) in enumerate(zip(rows, chinese_meanings, example_chinese), start=1):
-        korean_word = row["korean"]
-        refined_meaning = refine_chinese_meaning(
-            korean_word,
-            row["meaning_en"],
-            meaning_zh,
-            row["example_en"],
-        )
-        entries.append(
-            {
-                "id": f"topik1-{index:04d}",
-                "level": LEVEL,
-                "korean": korean_word,
-                "pronunciation": f"[{pronunciation(korean_word)}]",
-                "chineseMeaning": refined_meaning,
-                "partOfSpeech": "",
-                "exampleKorean": row["example_korean"],
-                "exampleChinese": example_zh,
-                "tags": ["topik1"],
-                "sourceMeaningEnglish": row["meaning_en"],
-                "sourceTranslationEnglish": row["example_en"],
-            }
-        )
-    return entries
-
-
-def refine_chinese_meaning(korean: str, meaning_en: str, meaning_zh: str, example_en: str) -> str:
     meaning = meaning_en.lower().strip()
     example = example_en.lower().strip()
-
-    korean_overrides = {
-        "가깝다": "近",
-        "감기": "感冒",
-        "가볍다": "輕",
-        "걷다": "走",
-        "가리키다": "指",
-        "갈아입다": "換",
-        "갈아타다": "轉乘",
-        "거실": "客廳",
-        "거울": "鏡子",
-        "경치": "景色",
-        "경기": "比賽",
-        "결혼식": "婚禮",
-        "걸리다": "被掛住",
-    }
-    if korean in korean_overrides:
-        return korean_overrides[korean]
 
     if meaning == "close" and "distance" in example:
         return "近"
@@ -457,16 +515,68 @@ def refine_chinese_meaning(korean: str, meaning_en: str, meaning_zh: str, exampl
         return "指"
     if meaning == "walk" and "school" in example:
         return "走"
-    if meaning == "view" or meaning == "scenery , view":
+    if meaning in {"view", "scenery , view"}:
         return "景色"
     if meaning == "match":
         return "比賽"
+    if meaning == "song":
+        return "歌曲"
+    if meaning == "chest":
+        return "胸部"
+    if meaning == "full":
+        return "滿"
 
     return meaning_zh
 
 
+def build_entries_for_level(level: str, reference_entries: dict[str, list[dict[str, str]]]) -> list[dict[str, object]]:
+    urls = lesson_urls(level)
+    expected = LEVEL_CONFIGS[level]["total_lessons"]
+    if len(urls) != expected:
+        raise RuntimeError(f"{level} expected {expected} lesson links, found {len(urls)}")
+
+    rows: list[dict[str, str]] = []
+    for url in urls:
+        rows.extend(parse_lesson(url))
+        time.sleep(0.2)
+
+    translator = GoogleTranslator(source="en", target="zh-TW")
+    chinese_meanings = translate_unique([row["meaning_en"] for row in rows], translator)
+    example_chinese = translate_unique([row["example_en"] for row in rows], translator)
+
+    entries: list[dict[str, object]] = []
+    for index, (row, meaning_zh, example_zh) in enumerate(zip(rows, chinese_meanings, example_chinese), start=1):
+        korean_word = row["korean"]
+        entries.append(
+            {
+                "id": f"{level}-{index:04d}",
+                "level": level,
+                "korean": korean_word,
+                "pronunciation": f"[{pronunciation(korean_word)}]",
+                "chineseMeaning": refine_chinese_meaning(level, korean_word, row["meaning_en"], meaning_zh, row["example_en"]),
+                "partOfSpeech": choose_part_of_speech(korean_word, reference_entries),
+                "exampleKorean": row["example_korean"],
+                "exampleChinese": example_chinese if isinstance(example_chinese, str) else example_zh,
+                "tags": [level],
+                "sourceMeaningEnglish": row["meaning_en"],
+                "sourceTranslationEnglish": row["example_en"],
+            }
+        )
+
+    return entries
+
+
+def build_all_entries() -> list[dict[str, object]]:
+    reference_entries = load_reference_entries()
+    entries: list[dict[str, object]] = []
+    for level in ("topik1", "topik2"):
+        level_entries = build_entries_for_level(level, reference_entries)
+        entries.extend(level_entries)
+    return entries
+
+
 def main() -> None:
-    entries = build_entries()
+    entries = build_all_entries()
     OUTPUT_PATH.write_text(json.dumps(entries, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {len(entries)} entries to {OUTPUT_PATH}")
 
