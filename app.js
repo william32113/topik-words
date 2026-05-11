@@ -1,4 +1,4 @@
-const APP_VERSION = "v1.5";
+const APP_VERSION = "v1.6";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
@@ -176,6 +176,7 @@ const els = {
   currentVersion: document.querySelector("#currentVersion"),
   latestVersion: document.querySelector("#latestVersion"),
   versionStatus: document.querySelector("#versionStatus"),
+  versionApplyUpdate: document.querySelector("#versionApplyUpdate"),
   autoUpdateEnabled: document.querySelector("#autoUpdateEnabled"),
   currentLevelLabel: document.querySelector("#currentLevelLabel"),
   nextStepLabel: document.querySelector("#nextStepLabel"),
@@ -200,6 +201,7 @@ const els = {
 let waitingServiceWorker = null;
 let refreshingForUpdate = false;
 let autoUpdateEnabled = true;
+let latestAvailableVersion = APP_VERSION;
 
 async function init() {
   restoreUpdatePreference();
@@ -224,11 +226,12 @@ async function init() {
 
 function renderVersionInfo() {
   els.currentVersion.textContent = APP_VERSION;
-  els.latestVersion.textContent = APP_VERSION;
-  els.versionStatus.textContent = "正在確認線上最新版本...";
+  els.latestVersion.textContent = latestAvailableVersion;
+  els.versionStatus.textContent = "??????????...";
   if (els.autoUpdateEnabled) {
     els.autoUpdateEnabled.checked = autoUpdateEnabled;
   }
+  syncVersionUpdateButton();
 }
 
 async function loadLatestVersion() {
@@ -240,6 +243,7 @@ async function loadLatestVersion() {
 
     const payload = await response.json();
     const latestVersion = payload.version || APP_VERSION;
+    latestAvailableVersion = latestVersion;
     els.latestVersion.textContent = latestVersion;
 
     if (latestVersion === APP_VERSION) {
@@ -247,10 +251,21 @@ async function loadLatestVersion() {
     } else {
       els.versionStatus.textContent = getVersionStatusMessage("update-available", latestVersion);
     }
+
+    syncVersionUpdateButton();
   } catch {
-    els.latestVersion.textContent = "無法確認";
+    latestAvailableVersion = "????";
+    els.latestVersion.textContent = "????";
     els.versionStatus.textContent = getVersionStatusMessage("check-failed");
+    syncVersionUpdateButton();
   }
+}
+
+function syncVersionUpdateButton() {
+  if (!els.versionApplyUpdate) return;
+  const shouldShow =
+    latestAvailableVersion !== APP_VERSION && latestAvailableVersion !== "????";
+  els.versionApplyUpdate.classList.toggle("hidden", !shouldShow);
 }
 
 function restoreUpdatePreference() {
@@ -417,6 +432,7 @@ function bindEvents() {
   );
 
   els.applyUpdate.addEventListener("click", applyPendingUpdate);
+  els.versionApplyUpdate?.addEventListener("click", applyPendingUpdate);
 
   els.autoUpdateEnabled?.addEventListener("change", (event) => {
     autoUpdateEnabled = event.target.checked;
@@ -1342,9 +1358,10 @@ function registerServiceWorker() {
 
 function promptForUpdate(worker) {
   waitingServiceWorker = worker;
+  syncVersionUpdateButton();
   els.updateBannerText.textContent = autoUpdateEnabled
-    ? "已偵測到新版本，正在嘗試自動更新；你也可以按按鈕手動更新。"
-    : "有新版本可更新，請按一下手動切換到最新版。";
+    ? "?????????????????????????????"
+    : "?????????????????????";
   els.updateBanner.classList.remove("hidden");
 
   if (autoUpdateEnabled) {
@@ -1354,7 +1371,8 @@ function promptForUpdate(worker) {
 
 function applyPendingUpdate() {
   if (!waitingServiceWorker) return;
-  els.updateBannerText.textContent = "\u6b63\u5728\u66f4\u65b0\u5230\u6700\u65b0\u7248\u672c...";
+  els.updateBannerText.textContent = "?????????...";
+  els.versionApplyUpdate?.classList.add("hidden");
   waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
 }
 
