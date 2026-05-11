@@ -1,4 +1,4 @@
-const APP_VERSION = "2026.05.12-2";
+const APP_VERSION = "v1.2";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const PROGRESS_SCHEMA_VERSION = 1;
