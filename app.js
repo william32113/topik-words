@@ -1,3 +1,4 @@
+const APP_VERSION = "2026.05.12-2";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const PROGRESS_SCHEMA_VERSION = 1;
@@ -169,6 +170,9 @@ const els = {
   masteredCount: document.querySelector("#masteredCount"),
   favoriteCount: document.querySelector("#favoriteCount"),
   reviewedCount: document.querySelector("#reviewedCount"),
+  currentVersion: document.querySelector("#currentVersion"),
+  latestVersion: document.querySelector("#latestVersion"),
+  versionStatus: document.querySelector("#versionStatus"),
   currentLevelLabel: document.querySelector("#currentLevelLabel"),
   nextStepLabel: document.querySelector("#nextStepLabel"),
   levelTabs: document.querySelector("#levelTabs"),
@@ -203,7 +207,37 @@ async function init() {
   renderDashboard();
   renderThemeList();
   renderWordList();
+  renderVersionInfo();
+  await loadLatestVersion();
   registerServiceWorker();
+}
+
+function renderVersionInfo() {
+  els.currentVersion.textContent = APP_VERSION;
+  els.latestVersion.textContent = APP_VERSION;
+  els.versionStatus.textContent = "正在確認線上最新版本...";
+}
+
+async function loadLatestVersion() {
+  try {
+    const response = await fetch(`version.json?ts=${Date.now()}`, { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error("version fetch failed");
+    }
+
+    const payload = await response.json();
+    const latestVersion = payload.version || APP_VERSION;
+    els.latestVersion.textContent = latestVersion;
+
+    if (latestVersion === APP_VERSION) {
+      els.versionStatus.textContent = "目前已經是最新版本。";
+    } else {
+      els.versionStatus.textContent = `目前載入 ${APP_VERSION}，線上最新是 ${latestVersion}。`;
+    }
+  } catch {
+    els.latestVersion.textContent = "無法確認";
+    els.versionStatus.textContent = `目前載入 ${APP_VERSION}，暫時無法確認線上最新版本。`;
+  }
 }
 
 function restoreState() {

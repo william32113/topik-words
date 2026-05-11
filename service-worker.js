@@ -1,10 +1,11 @@
-const APP_CACHE_VERSION = "2026-05-10-3";
+const APP_CACHE_VERSION = "2026-05-12-2";
 const CACHE_NAME = `topik-words-cache-${APP_CACHE_VERSION}`;
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./version.json",
   "./manifest.webmanifest",
   "./data/sample_topik_vocab.json",
   "./assets/icon-192.svg",
@@ -15,6 +16,7 @@ const NETWORK_FIRST_PATHS = [
   "/",
   "/index.html",
   "/app.js",
+  "/version.json",
   "/styles.css",
   "/manifest.webmanifest",
   "/data/sample_topik_vocab.json",

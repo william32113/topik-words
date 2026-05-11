@@ -329,6 +329,43 @@ button {
   font-size: 1rem;
 }
 
+.version-panel {
+  margin-top: 16px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+}
+
+.version-panel h3 {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-family: var(--title-font);
+}
+
+.version-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.version-grid div {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.version-grid dt {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.version-grid dd {
+  margin: 6px 0 0;
+  font-weight: 700;
+}
+
 .progress-grid {
   margin: 0;
   display: grid;
@@ -636,7 +673,8 @@ button {
   }
 
   .hero-stats,
-  .progress-grid {
+  .progress-grid,
+  .version-grid {
     grid-template-columns: 1fr;
   }
 
