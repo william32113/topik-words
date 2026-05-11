@@ -1,6 +1,7 @@
-const APP_VERSION = "v1.4";
+const APP_VERSION = "v1.5";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
+const AUTO_UPDATE_KEY = "topik-words-auto-update";
 const PROGRESS_SCHEMA_VERSION = 1;
 const MAX_FAMILIARITY = 5;
 const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -175,6 +176,7 @@ const els = {
   currentVersion: document.querySelector("#currentVersion"),
   latestVersion: document.querySelector("#latestVersion"),
   versionStatus: document.querySelector("#versionStatus"),
+  autoUpdateEnabled: document.querySelector("#autoUpdateEnabled"),
   currentLevelLabel: document.querySelector("#currentLevelLabel"),
   nextStepLabel: document.querySelector("#nextStepLabel"),
   levelTabs: document.querySelector("#levelTabs"),
@@ -197,8 +199,10 @@ const els = {
 
 let waitingServiceWorker = null;
 let refreshingForUpdate = false;
+let autoUpdateEnabled = true;
 
 async function init() {
+  restoreUpdatePreference();
   renderVersionInfo();
   const versionPromise = loadLatestVersion();
   restoreState();
@@ -222,6 +226,9 @@ function renderVersionInfo() {
   els.currentVersion.textContent = APP_VERSION;
   els.latestVersion.textContent = APP_VERSION;
   els.versionStatus.textContent = "正在確認線上最新版本...";
+  if (els.autoUpdateEnabled) {
+    els.autoUpdateEnabled.checked = autoUpdateEnabled;
+  }
 }
 
 async function loadLatestVersion() {
@@ -236,14 +243,47 @@ async function loadLatestVersion() {
     els.latestVersion.textContent = latestVersion;
 
     if (latestVersion === APP_VERSION) {
-      els.versionStatus.textContent = "目前已經是最新版本。";
+      els.versionStatus.textContent = getVersionStatusMessage("latest", latestVersion);
     } else {
-      els.versionStatus.textContent = `目前載入 ${APP_VERSION}，線上最新是 ${latestVersion}。`;
+      els.versionStatus.textContent = getVersionStatusMessage("update-available", latestVersion);
     }
   } catch {
     els.latestVersion.textContent = "無法確認";
-    els.versionStatus.textContent = `目前載入 ${APP_VERSION}，暫時無法確認線上最新版本。`;
+    els.versionStatus.textContent = getVersionStatusMessage("check-failed");
   }
+}
+
+function restoreUpdatePreference() {
+  try {
+    const saved = localStorage.getItem(AUTO_UPDATE_KEY);
+    if (saved === null) {
+      autoUpdateEnabled = true;
+      return;
+    }
+    autoUpdateEnabled = saved === "true";
+  } catch {
+    autoUpdateEnabled = true;
+  }
+}
+
+function persistUpdatePreference() {
+  localStorage.setItem(AUTO_UPDATE_KEY, String(autoUpdateEnabled));
+}
+
+function getVersionStatusMessage(mode, latestVersion = APP_VERSION) {
+  if (mode === "latest") {
+    return autoUpdateEnabled
+      ? `目前已是最新版本 ${APP_VERSION}，自動更新已開啟。`
+      : `目前已是最新版本 ${APP_VERSION}，自動更新已關閉。`;
+  }
+
+  if (mode === "update-available") {
+    return autoUpdateEnabled
+      ? `目前載入 ${APP_VERSION}，線上最新是 ${latestVersion}。已開啟自動更新，也可以按按鈕手動更新。`
+      : `目前載入 ${APP_VERSION}，線上最新是 ${latestVersion}。自動更新已關閉，請按按鈕手動更新。`;
+  }
+
+  return `目前載入 ${APP_VERSION}，暫時無法確認線上最新版本。`;
 }
 
 function restoreState() {
@@ -377,6 +417,22 @@ function bindEvents() {
   );
 
   els.applyUpdate.addEventListener("click", applyPendingUpdate);
+
+  els.autoUpdateEnabled?.addEventListener("change", (event) => {
+    autoUpdateEnabled = event.target.checked;
+    persistUpdatePreference();
+    renderVersionInfo();
+
+    const latestVersion = els.latestVersion.textContent || APP_VERSION;
+    els.versionStatus.textContent =
+      latestVersion === APP_VERSION
+        ? getVersionStatusMessage("latest", latestVersion)
+        : getVersionStatusMessage("update-available", latestVersion);
+
+    if (waitingServiceWorker && autoUpdateEnabled) {
+      applyPendingUpdate();
+    }
+  });
 }
 
 async function loadWords() {
@@ -1286,13 +1342,19 @@ function registerServiceWorker() {
 
 function promptForUpdate(worker) {
   waitingServiceWorker = worker;
-  els.updateBannerText.textContent = "有新版本可更新，按一下就會切換到最新版。";
+  els.updateBannerText.textContent = autoUpdateEnabled
+    ? "已偵測到新版本，正在嘗試自動更新；你也可以按按鈕手動更新。"
+    : "有新版本可更新，請按一下手動切換到最新版。";
   els.updateBanner.classList.remove("hidden");
+
+  if (autoUpdateEnabled) {
+    window.setTimeout(() => applyPendingUpdate(), 150);
+  }
 }
 
 function applyPendingUpdate() {
   if (!waitingServiceWorker) return;
-  els.updateBannerText.textContent = "正在更新到最新版...";
+  els.updateBannerText.textContent = "\u6b63\u5728\u66f4\u65b0\u5230\u6700\u65b0\u7248\u672c...";
   waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
 }
 

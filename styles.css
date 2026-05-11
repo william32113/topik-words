@@ -366,6 +366,20 @@ button {
   font-weight: 700;
 }
 
+.update-toggle {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.update-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+
 .progress-grid {
   margin: 0;
   display: grid;
