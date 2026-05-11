@@ -4,6 +4,45 @@ const PROGRESS_SCHEMA_VERSION = 1;
 const MAX_FAMILIARITY = 5;
 const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
 
+const topicDefinitions = [
+  {
+    id: "daily",
+    label: "日常作息",
+    description: "先學今天、現在、吃飯、睡覺這類每天都會遇到的字。",
+    terms: ["오늘", "내일", "지금", "아침", "점심", "저녁", "밥", "물", "자다", "일어나다", "가다", "오다"]
+  },
+  {
+    id: "school",
+    label: "學校上課",
+    description: "把去學校、上課、老師、同學相關的高頻字集中練。",
+    terms: ["학교", "학생", "선생님", "교실", "공부", "책", "공책", "교과서", "문제", "시험"]
+  },
+  {
+    id: "food",
+    label: "吃飯點餐",
+    description: "從餐廳和咖啡店最常遇到的名詞與動作開始。",
+    terms: ["식당", "커피", "차", "물", "밥", "김치", "갈비", "설탕", "숟가락", "젓가락", "먹다", "마시다"]
+  },
+  {
+    id: "transport",
+    label: "交通移動",
+    description: "學會搭車、走路、換乘、出發這些外出必備字。",
+    terms: ["버스", "지하철", "택시", "기차", "비행기", "길", "거리", "걷다", "걸어가다", "갈아타다", "오다", "가다"]
+  },
+  {
+    id: "shopping",
+    label: "購物付款",
+    description: "把價格、商店、衣服和買東西時常用的字先練熟。",
+    terms: ["가게", "가격", "돈", "시장", "백화점", "옷", "치마", "바지", "사다", "입다", "카드", "가방"]
+  },
+  {
+    id: "family",
+    label: "家人朋友",
+    description: "先建立介紹自己、家人和朋友時最容易用到的字。",
+    terms: ["가족", "엄마", "아버지", "아빠", "언니", "누나", "형", "동생", "친구", "이름", "집", "같이"]
+  }
+];
+
 const state = {
   words: [],
   selectedLevel: "topik1",
@@ -27,6 +66,12 @@ const state = {
     index: 0,
     score: 0,
     answered: false
+  },
+  recall: {
+    title: "中文 -> 韓文",
+    deck: [],
+    index: 0,
+    revealed: false
   }
 };
 
@@ -60,8 +105,10 @@ const els = {
   listSummary: document.querySelector("#listSummary"),
   wordList: document.querySelector("#wordList"),
   openFlashcard: document.querySelector("#openFlashcard"),
+  openRecall: document.querySelector("#openRecall"),
   openQuiz: document.querySelector("#openQuiz"),
   openReview: document.querySelector("#openReview"),
+  themeList: document.querySelector("#themeList"),
   overlay: document.querySelector("#overlay"),
   overlayContent: document.querySelector("#overlayContent"),
   closeOverlay: document.querySelector("#closeOverlay"),
@@ -83,6 +130,7 @@ async function init() {
   renderLevelTabs();
   renderFilters();
   renderDashboard();
+  renderThemeList();
   renderWordList();
   registerServiceWorker();
 }
@@ -173,6 +221,7 @@ function bindEvents() {
   });
 
   els.openFlashcard.addEventListener("click", () => openFlashcards("all"));
+  els.openRecall.addEventListener("click", () => openRecallStudy(getStudyWords("all"), `${levelLabels[state.selectedLevel]} 中文 -> 韓文`));
   els.openQuiz.addEventListener("click", openQuiz);
   els.openReview.addEventListener("click", () => openFlashcards("review"));
   els.closeOverlay.addEventListener("click", closeOverlay);
@@ -274,6 +323,48 @@ function renderDashboard() {
   els.dueCount.textContent = String(getDueWords().length);
   els.masteredCount.textContent = String(getMasteredCount());
   els.nextStepLabel.textContent = getDueWords().length > 0 ? "先練待複習字卡" : "可以開始新單字";
+}
+
+function renderThemeList() {
+  els.themeList.innerHTML = "";
+
+  topicDefinitions.forEach((topic) => {
+    const words = getTopicWords(topic);
+    const card = document.createElement("article");
+    card.className = "theme-card";
+    card.innerHTML = `
+      <span class="theme-badge">${topic.label}</span>
+      <h4>${topic.label}</h4>
+      <p>${topic.description}</p>
+      <div class="theme-card__meta">目前可練 ${words.length} 個字</div>
+      <div class="theme-card__actions">
+        <button class="ghost-button" type="button" data-topic-action="browse" data-topic-id="${topic.id}">看這個主題</button>
+        <button class="primary-button" type="button" data-topic-action="recall" data-topic-id="${topic.id}">開始回想練習</button>
+      </div>
+    `;
+
+    card.querySelectorAll("[data-topic-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const selectedTopic = topicDefinitions.find((entry) => entry.id === button.dataset.topicId);
+        if (!selectedTopic) return;
+        const topicWords = getTopicWords(selectedTopic);
+
+        if (button.dataset.topicAction === "browse") {
+          openTopicOverview(selectedTopic, topicWords);
+          return;
+        }
+
+        openRecallStudy(topicWords, `${selectedTopic.label} 中文 -> 韓文`);
+      });
+    });
+
+    els.themeList.appendChild(card);
+  });
+}
+
+function getTopicWords(topic) {
+  const lookup = new Set(topic.terms);
+  return state.words.filter((word) => word.level === "topik1" && lookup.has(word.korean));
 }
 
 function getVisibleWords() {
@@ -415,6 +506,46 @@ function openDetail(word) {
   openOverlay();
 }
 
+function openTopicOverview(topic, words) {
+  const preview = words
+    .slice(0, 12)
+    .map(
+      (word) => `
+        <article class="word-card">
+          <div class="word-main">
+            <div>
+              <p class="word-level">${levelLabels[word.level]}</p>
+              <h3 class="word-korean">${word.korean}</h3>
+              <p class="word-pronunciation">${word.pronunciation || ""}</p>
+            </div>
+          </div>
+          <p class="word-meaning">${word.chineseMeaning}</p>
+        </article>
+      `
+    )
+    .join("");
+
+  setOverlayContent(`
+    <div class="study-deck">
+      <div>
+        <p class="study-progress">生活主題</p>
+        <h2 id="overlayTitle" class="study-title">${topic.label}</h2>
+        <p class="helper-text">${topic.description}</p>
+      </div>
+      <div class="study-toolbar">
+        <button class="primary-button" id="topicRecall" type="button">開始中文 -> 韓文</button>
+      </div>
+      <div class="word-list">${preview || '<div class="empty-state">這個主題目前還沒有可用單字。</div>'}</div>
+    </div>
+  `);
+
+  document.querySelector("#topicRecall")?.addEventListener("click", () => {
+    openRecallStudy(words, `${topic.label} 中文 -> 韓文`);
+  });
+
+  openOverlay();
+}
+
 function getStudyWords(mode = "all") {
   const visible = getVisibleWords();
   if (mode === "review") {
@@ -516,6 +647,94 @@ function openQuiz() {
   state.quiz.answered = false;
   renderQuiz();
   openOverlay();
+}
+
+function openRecallStudy(sourceWords, title) {
+  const deck = shuffle([...sourceWords]).slice(0, 12);
+  state.recall.title = title;
+  state.recall.deck = deck;
+  state.recall.index = 0;
+  state.recall.revealed = false;
+  renderRecallStudy();
+  openOverlay();
+}
+
+function renderRecallStudy() {
+  const { deck, index, revealed, title } = state.recall;
+  const word = deck[index];
+
+  if (!deck.length) {
+    setOverlayContent(`
+      <div class="study-empty">
+        <h2 id="overlayTitle" class="study-title">目前沒有可練習的題目</h2>
+        <p class="helper-text">先換個主題或級數，之後再回來做主動回想。</p>
+      </div>
+    `);
+    return;
+  }
+
+  if (!word) {
+    setOverlayContent(`
+      <div class="study-deck">
+        <h2 id="overlayTitle" class="study-title">${title}</h2>
+        <p class="study-progress">這一輪已完成，可以再做一次加深記憶。</p>
+        <div class="study-toolbar">
+          <button class="primary-button" id="restartRecall" type="button">再練一次</button>
+        </div>
+      </div>
+    `);
+    document.querySelector("#restartRecall").addEventListener("click", () => openRecallStudy(deck, title));
+    return;
+  }
+
+  const progress = getProgress(word.id);
+  setOverlayContent(`
+    <div class="study-deck">
+      <div>
+        <p class="study-progress">第 ${index + 1} / ${deck.length} 題 ・ ${title}</p>
+        <h2 id="overlayTitle" class="study-title">先想韓文，再看答案</h2>
+      </div>
+      <section class="flashcard">
+        <div class="study-deck__hint">
+          <p class="study-label">中文意思</p>
+          <h3>${word.chineseMeaning}</h3>
+          <p class="helper-text">${word.exampleChinese || "先用自己的方式默念一次，再揭曉韓文。"}</p>
+          <p>${revealed ? `${word.korean} ${word.pronunciation || ""}` : "先回想韓文，再按下方按鈕看答案。"}</p>
+          <p class="helper-text">目前熟悉度 ${progress.familiarity}/${MAX_FAMILIARITY}</p>
+        </div>
+      </section>
+      <div class="study-toolbar">
+        <button class="ghost-button" id="recallSpeak" type="button">播放答案發音</button>
+        <button class="primary-button" id="recallReveal" type="button">${revealed ? "顯示評分" : "看答案"}</button>
+      </div>
+      <div class="${revealed ? "" : "hidden"}" id="recallRatingBlock">
+        <p class="helper-text">剛剛你在揭曉前有想起來嗎？</p>
+        <div class="familiarity-row">
+          <button class="familiarity-button" id="recallHard" type="button">沒想起來</button>
+          <button class="familiarity-button" id="recallMedium" type="button">想了一下</button>
+          <button class="familiarity-button" id="recallEasy" type="button">很快想起來</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  document.querySelector("#recallSpeak").addEventListener("click", () => speak(word.korean));
+  document.querySelector("#recallReveal").addEventListener("click", () => {
+    state.recall.revealed = true;
+    renderRecallStudy();
+  });
+  document.querySelector("#recallHard").addEventListener("click", () => rateRecall(word.id, "hard"));
+  document.querySelector("#recallMedium").addEventListener("click", () => rateRecall(word.id, "medium"));
+  document.querySelector("#recallEasy").addEventListener("click", () => rateRecall(word.id, "easy"));
+}
+
+function rateRecall(wordId, result) {
+  applyReviewResult(wordId, result);
+  state.recall.index += 1;
+  state.recall.revealed = false;
+  renderDashboard();
+  renderWordList();
+  renderRecallStudy();
 }
 
 function renderQuiz() {
