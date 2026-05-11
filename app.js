@@ -43,6 +43,77 @@ const topicDefinitions = [
   }
 ];
 
+const politeExampleOverrides = {
+  "학교에 가다": "학교에 가요.",
+  "가게에 가다": "가게에 가요.",
+  "집에 오다": "집에 와요.",
+  "밥을 먹다": "밥을 먹어요.",
+  "물을 마시다": "물을 마셔요.",
+  "버스를 기다리다": "버스를 기다려요.",
+  "버스를 타다": "버스를 타요.",
+  "공부를 하다": "공부해요.",
+  "교실에 들어가다": "교실에 들어가요.",
+  "친구를 만나다": "친구를 만나요.",
+  "옷을 갈아입다": "옷을 갈아입어요.",
+  "기차를 갈아타다": "기차를 갈아타요.",
+  "길을 건너다": "길을 건너요.",
+  "길을 건너가다": "길을 건너가요.",
+  "학교에 걸어가다": "학교에 걸어가요.",
+  "집에 걸어오다": "집에 걸어와요.",
+  "갈비를 먹다": "갈비를 먹어요.",
+  "갈비탕을 먹다": "갈비탕을 먹어요.",
+  "감기약을 먹다": "감기약을 먹어요.",
+  "눈을 감다": "눈을 감아요.",
+  "머리를 감다": "머리를 감아요.",
+  "거울을 보다": "거울을 봐요.",
+  "경치가 좋다": "경치가 좋아요.",
+  "손가락이 가늘다": "손가락이 가늘어요.",
+  "가격이 비싸다": "가격이 비싸요.",
+  "거리가 가깝다": "거리가 가까워요.",
+  "짐이 가볍다": "짐이 가벼워요.",
+  "같이 살다": "같이 살아요.",
+  "돈을 갚다": "돈을 갚아요.",
+  "한국에 계시다": "한국에 계세요."
+};
+
+const directPoliteForms = {
+  "가다": "가요",
+  "오다": "와요",
+  "보다": "봐요",
+  "주다": "줘요",
+  "자다": "자요",
+  "사다": "사요",
+  "타다": "타요",
+  "메다": "메요",
+  "하다": "해요",
+  "되다": "돼요",
+  "있다": "있어요",
+  "없다": "없어요",
+  "마시다": "마셔요",
+  "기다리다": "기다려요",
+  "가르치다": "가르쳐요",
+  "걸리다": "걸려요",
+  "만나다": "만나요",
+  "먹다": "먹어요",
+  "입다": "입어요",
+  "감다": "감아요",
+  "걷다": "걸어요",
+  "읽다": "읽어요",
+  "듣다": "들어요",
+  "갈아타다": "갈아타요",
+  "갈아입다": "갈아입어요",
+  "가져오다": "가져와요",
+  "가져가다": "가져가요",
+  "계시다": "계세요",
+  "가깝다": "가까워요",
+  "가볍다": "가벼워요",
+  "귀엽다": "귀여워요",
+  "좋다": "좋아요",
+  "같다": "같아요",
+  "괜찮다": "괜찮아요",
+  "비싸다": "비싸요"
+};
+
 const state = {
   words: [],
   selectedLevel: "topik1",
@@ -446,40 +517,131 @@ function toggleFavorite(id) {
   persistState();
 }
 
+function getExampleContent(word) {
+  const korean = buildPoliteExample(word);
+  const chinese = buildExampleChinese(word);
+  return { korean, chinese };
+}
+
+function buildPoliteExample(word) {
+  const seed = normalizeExampleSeed(word.exampleKorean);
+
+  if (!seed || seed === "-" || seed === "?") {
+    return fallbackExample(word);
+  }
+
+  if (politeExampleOverrides[seed]) {
+    return politeExampleOverrides[seed];
+  }
+
+  if (seed.endsWith("?.") || seed.endsWith("?")) {
+    return ensureSentencePunctuation(seed);
+  }
+
+  return ensureSentencePunctuation(convertExampleSeedToPolite(seed) || fallbackExample(word));
+}
+
+function normalizeExampleSeed(example) {
+  return String(example || "").replace(/\s+/g, " ").trim();
+}
+
+function convertExampleSeedToPolite(seed) {
+  if (/^[?-?]+$/.test(seed) && !seed.endsWith("?")) {
+    return `${seed}??`;
+  }
+
+  const parts = seed.split(" ");
+  const last = parts.at(-1);
+  if (!last) return "";
+
+  if (last.endsWith("?")) {
+    parts[parts.length - 1] = conjugateDictionaryForm(last);
+    return parts.join(" ");
+  }
+
+  return seed;
+}
+
+function conjugateDictionaryForm(word) {
+  if (directPoliteForms[word]) {
+    return directPoliteForms[word];
+  }
+
+  if (!word.endsWith("?")) {
+    return word;
+  }
+
+  const stem = word.slice(0, -1);
+  const lastChar = stem.at(-1);
+  if (!lastChar || !/[?-?]/.test(lastChar)) {
+    return `${stem}?`;
+  }
+
+  const code = lastChar.charCodeAt(0) - 0xac00;
+  const jong = code % 28;
+  const jung = Math.floor(code / 28) % 21;
+  const brightVowels = new Set([0, 8]);
+
+  if (jong === 0 && (jung === 0 || jung === 8)) {
+    return `${stem}?`;
+  }
+
+  return `${stem}${brightVowels.has(jung) ? "??" : "??"}`;
+}
+
+function fallbackExample(word) {
+  if (word.korean.endsWith("?")) {
+    return conjugateDictionaryForm(word.korean);
+  }
+
+  return `${word.korean}??`;
+}
+
+function buildExampleChinese(word) {
+  const raw = String(word.exampleChinese || "").trim();
+  if (!raw || raw === "-") {
+    return `???${word.chineseMeaning}???????`;
+  }
+  return raw.endsWith("?") ? raw : `${raw}?`;
+}
+
+function ensureSentencePunctuation(text) {
+  return text.trim().replace(/[.?]+$/, "") + ".";
+}
+
 function openDetail(word) {
   const progress = getProgress(word.id);
+  const example = getExampleContent(word);
   setOverlayContent(`
     <header class="detail-header">
       <p class="word-level">${levelLabels[word.level]}</p>
       <h2 id="overlayTitle" class="detail-korean">${word.korean}</h2>
-      <p class="detail-meta">${[word.pronunciation, word.partOfSpeech].filter(Boolean).join(" ・ ")}</p>
+      <p class="detail-meta">${[word.pronunciation, word.partOfSpeech].filter(Boolean).join(" ? ")}</p>
       <p class="detail-meaning">${word.chineseMeaning}</p>
     </header>
     <div class="detail-actions">
-      <button class="primary-button" id="detailSpeak" type="button">播放發音</button>
-      <button class="ghost-button" id="detailFavorite" type="button">${state.favorites.has(word.id) ? "取消收藏" : "加入收藏"}</button>
+      <button class="primary-button" id="detailSpeak" type="button">????</button>
+      <button class="ghost-button" id="detailExampleSpeak" type="button">????</button>
+      <button class="ghost-button" id="detailFavorite" type="button">${state.favorites.has(word.id) ? "????" : "????"}</button>
     </div>
     <section class="detail-block">
-      <h3>學習狀態</h3>
-      <p class="helper-text">熟悉度 ${progress.familiarity}/${MAX_FAMILIARITY} ・ 已練習 ${progress.reviewCount} 次 ・ ${formatReviewState(progress)}</p>
+      <h3>????</h3>
+      <p class="helper-text">??? ${progress.familiarity}/${MAX_FAMILIARITY} ? ??? ${progress.reviewCount} ? ? ${formatReviewState(progress)}</p>
       <div class="familiarity-row">
-        <button class="familiarity-button" type="button" data-score="0" data-word-id="${word.id}" data-action="set-hard">還不熟</button>
-        <button class="familiarity-button" type="button" data-score="2" data-word-id="${word.id}" data-action="set-medium">普通</button>
-        <button class="familiarity-button" type="button" data-score="4" data-word-id="${word.id}" data-action="set-good">很熟</button>
+        <button class="familiarity-button" type="button" data-score="0" data-word-id="${word.id}" data-action="set-hard">???</button>
+        <button class="familiarity-button" type="button" data-score="2" data-word-id="${word.id}" data-action="set-medium">??</button>
+        <button class="familiarity-button" type="button" data-score="4" data-word-id="${word.id}" data-action="set-good">??</button>
       </div>
     </section>
     <section class="detail-block">
-      <h3>應用句子</h3>
-      <p>${word.exampleKorean}</p>
-      <p class="detail-example">${word.exampleChinese}</p>
-    </section>
-    <section class="detail-block">
-      <h3>標籤</h3>
-      <p class="detail-meta">${word.tags.join(", ")}</p>
+      <h3>????</h3>
+      <p>${example.korean}</p>
+      <p class="detail-example">${example.chinese}</p>
     </section>
   `);
 
   document.querySelector("#detailSpeak").addEventListener("click", () => speak(word.korean));
+  document.querySelector("#detailExampleSpeak").addEventListener("click", () => speak(example.korean));
   document.querySelector("#detailFavorite").addEventListener("click", () => {
     toggleFavorite(word.id);
     renderDashboard();
