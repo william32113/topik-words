@@ -394,6 +394,25 @@ button {
   gap: 14px;
 }
 
+.list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.list-pagination .ghost-button[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  transform: none;
+}
+
+.list-pagination .helper-text {
+  flex: 1;
+  text-align: center;
+}
+
 .word-card {
   border-radius: 22px;
   padding: 18px;
@@ -680,5 +699,10 @@ button {
 
   .word-meta-row {
     flex-direction: column;
+  }
+
+  .list-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

@@ -1,9 +1,10 @@
-const APP_VERSION = "v1.3";
+const APP_VERSION = "v1.4";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const PROGRESS_SCHEMA_VERSION = 1;
 const MAX_FAMILIARITY = 5;
 const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
+const WORDS_PER_PAGE = 30;
 
 const topicDefinitions = [
   {
@@ -120,6 +121,7 @@ const state = {
   selectedLevel: "topik1",
   filter: "all",
   search: "",
+  currentPage: 1,
   favorites: new Set(),
   progress: {},
   progressSchemaVersion: PROGRESS_SCHEMA_VERSION,
@@ -178,6 +180,9 @@ const els = {
   levelTabs: document.querySelector("#levelTabs"),
   searchInput: document.querySelector("#searchInput"),
   listSummary: document.querySelector("#listSummary"),
+  pageSummary: document.querySelector("#pageSummary"),
+  prevPage: document.querySelector("#prevPage"),
+  nextPage: document.querySelector("#nextPage"),
   wordList: document.querySelector("#wordList"),
   openFlashcard: document.querySelector("#openFlashcard"),
   openRecall: document.querySelector("#openRecall"),
@@ -194,6 +199,8 @@ let waitingServiceWorker = null;
 let refreshingForUpdate = false;
 
 async function init() {
+  renderVersionInfo();
+  const versionPromise = loadLatestVersion();
   restoreState();
   bindEvents();
   await loadWords();
@@ -207,8 +214,7 @@ async function init() {
   renderDashboard();
   renderThemeList();
   renderWordList();
-  renderVersionInfo();
-  await loadLatestVersion();
+  await versionPromise;
   registerServiceWorker();
 }
 
@@ -249,6 +255,7 @@ function restoreState() {
     state.selectedLevel = saved.selectedLevel || state.selectedLevel;
     state.filter = saved.filter || state.filter;
     state.search = saved.search || "";
+    state.currentPage = Number.isFinite(saved.currentPage) && saved.currentPage > 0 ? saved.currentPage : 1;
     state.favorites = new Set(saved.favorites || []);
     state.progress = saved.progress || {};
     state.progressSchemaVersion = saved.progressSchemaVersion || 0;
@@ -301,6 +308,7 @@ function persistState() {
     selectedLevel: state.selectedLevel,
     filter: state.filter,
     search: state.search,
+    currentPage: state.currentPage,
     favorites: [...state.favorites],
     progress: state.progress,
     progressSchemaVersion: state.progressSchemaVersion
@@ -312,6 +320,7 @@ function bindEvents() {
   els.searchInput.value = state.search;
   els.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value.trim();
+    state.currentPage = 1;
     persistState();
     renderWordList();
   });
@@ -319,10 +328,26 @@ function bindEvents() {
   document.querySelectorAll("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.filter = button.dataset.filter;
+      state.currentPage = 1;
       persistState();
       renderFilters();
       renderWordList();
     });
+  });
+
+  els.prevPage?.addEventListener("click", () => {
+    if (state.currentPage <= 1) return;
+    state.currentPage -= 1;
+    persistState();
+    renderWordList();
+  });
+
+  els.nextPage?.addEventListener("click", () => {
+    const totalPages = getWordListPageCount();
+    if (state.currentPage >= totalPages) return;
+    state.currentPage += 1;
+    persistState();
+    renderWordList();
   });
 
   els.openFlashcard.addEventListener("click", () => openFlashcards("all"));
@@ -406,6 +431,7 @@ function renderLevelTabs() {
     button.type = "button";
     button.addEventListener("click", () => {
       state.selectedLevel = level;
+      state.currentPage = 1;
       persistState();
       renderLevelTabs();
       renderDashboard();
@@ -495,9 +521,28 @@ function getVisibleWords() {
     });
 }
 
+function getWordListPageCount() {
+  return Math.max(1, Math.ceil(getVisibleWords().length / WORDS_PER_PAGE));
+}
+
 function renderWordList() {
   const words = getVisibleWords();
+  const totalPages = Math.max(1, Math.ceil(words.length / WORDS_PER_PAGE));
+  if (state.currentPage > totalPages) {
+    state.currentPage = totalPages;
+  }
+  const pageStart = (state.currentPage - 1) * WORDS_PER_PAGE;
+  const pageWords = words.slice(pageStart, pageStart + WORDS_PER_PAGE);
   els.wordList.innerHTML = "";
+  if (els.pageSummary) {
+    els.pageSummary.textContent = `第 ${state.currentPage} / ${totalPages} 頁 ・ 每頁 ${WORDS_PER_PAGE} 個`;
+  }
+  if (els.prevPage) {
+    els.prevPage.disabled = state.currentPage <= 1;
+  }
+  if (els.nextPage) {
+    els.nextPage.disabled = state.currentPage >= totalPages;
+  }
   els.listSummary.textContent = `${levelLabels[state.selectedLevel]} 目前有 ${words.length} 個符合條件的單字`;
 
   if (!words.length) {
@@ -508,7 +553,7 @@ function renderWordList() {
     return;
   }
 
-  words.forEach((word) => {
+  pageWords.forEach((word) => {
     const progress = getProgress(word.id);
     const fragment = els.wordCardTemplate.content.cloneNode(true);
     const level = fragment.querySelector(".word-level");
@@ -1252,6 +1297,8 @@ function applyPendingUpdate() {
 }
 
 init().catch(() => {
+  renderVersionInfo();
+  loadLatestVersion();
   els.listSummary.textContent = "資料載入失敗。";
   els.wordList.innerHTML =
     '<div class="empty-state">讀取單字資料失敗，請確認檔案完整後重新整理。</div>';
