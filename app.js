@@ -1,4 +1,4 @@
-const APP_VERSION = "v1.8";
+const APP_VERSION = "v1.10";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
@@ -753,7 +753,18 @@ function buildExampleChinese(word) {
   if (!raw || raw === "-") {
     return `\u548c\u300c${word.chineseMeaning}\u300d\u6709\u95dc\u7684\u5e38\u7528\u53e5\u5b50\u3002`;
   }
-  return raw.endsWith("?") ? raw : `${raw}?`;
+  if (/[。！？!?]$/.test(raw)) {
+    return raw.replace(/\?$/, "？").replace(/!$/, "！");
+  }
+
+  const exampleKorean = String(word.exampleKorean || "").trim();
+  if (exampleKorean.endsWith("?")) {
+    return `${raw}？`;
+  }
+  if (exampleKorean.endsWith("!")) {
+    return `${raw}！`;
+  }
+  return `${raw}。`;
 }
 
 function ensureSentencePunctuation(text) {
