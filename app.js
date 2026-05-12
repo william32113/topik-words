@@ -1,4 +1,4 @@
-const APP_VERSION = "v1.10";
+const APP_VERSION = "v1.11";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
@@ -1380,13 +1380,29 @@ function promptForUpdate(worker) {
   }
 }
 
-function applyPendingUpdate() {
+async function forceRefreshToLatestVersion() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in window) {
+      const cacheKeys = await caches.keys();
+      await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+    }
+  } catch {}
+
+  const targetUrl = new URL(window.location.href);
+  targetUrl.searchParams.set("refresh", String(Date.now()));
+  window.location.replace(targetUrl.toString());
+}
+
+async function applyPendingUpdate() {
   if (!waitingServiceWorker) {
     els.updateBannerText.textContent = "\u6b63\u5728\u91cd\u65b0\u8f09\u5165\u6700\u65b0\u7248\u672c...";
     els.versionApplyUpdate?.classList.add("hidden");
-    window.setTimeout(() => {
-      window.location.reload();
-    }, 120);
+    await forceRefreshToLatestVersion();
     return;
   }
   els.updateBannerText.textContent = "\u6b63\u5728\u66f4\u65b0\u5230\u6700\u65b0\u7248\u672c...";
