@@ -1,11 +1,11 @@
-const APP_VERSION = "v1.11";
+const APP_VERSION = "v1.12";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
 const PROGRESS_SCHEMA_VERSION = 1;
 const MAX_FAMILIARITY = 5;
 const REVIEW_DELAY_MS = 24 * 60 * 60 * 1000;
-const WORDS_PER_PAGE = 30;
+const WORDS_PER_PAGE = 12;
 
 const topicDefinitions = [
   {
@@ -184,6 +184,7 @@ const els = {
   searchInput: document.querySelector("#searchInput"),
   listSummary: document.querySelector("#listSummary"),
   pageSummary: document.querySelector("#pageSummary"),
+  pageNumbers: document.querySelector("#pageNumbers"),
   prevPage: document.querySelector("#prevPage"),
   nextPage: document.querySelector("#nextPage"),
   wordList: document.querySelector("#wordList"),
@@ -597,6 +598,15 @@ function getWordListPageCount() {
   return Math.max(1, Math.ceil(getVisibleWords().length / WORDS_PER_PAGE));
 }
 
+function getVisiblePageNumbers(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+  return Array.from({ length: 5 }, (_, index) => start + index);
+}
+
 function renderWordList() {
   const words = getVisibleWords();
   const totalPages = Math.max(1, Math.ceil(words.length / WORDS_PER_PAGE));
@@ -608,6 +618,24 @@ function renderWordList() {
   els.wordList.innerHTML = "";
   if (els.pageSummary) {
     els.pageSummary.textContent = `第 ${state.currentPage} / ${totalPages} 頁 ・ 每頁 ${WORDS_PER_PAGE} 個`;
+  }
+  if (els.pageNumbers) {
+    els.pageNumbers.innerHTML = "";
+    const pageNumbers = getVisiblePageNumbers(state.currentPage, totalPages);
+
+    pageNumbers.forEach((pageNumber) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `ghost-button page-number${pageNumber === state.currentPage ? " is-active" : ""}`;
+      button.textContent = String(pageNumber);
+      button.addEventListener("click", () => {
+        if (pageNumber === state.currentPage) return;
+        state.currentPage = pageNumber;
+        persistState();
+        renderWordList();
+      });
+      els.pageNumbers.appendChild(button);
+    });
   }
   if (els.prevPage) {
     els.prevPage.disabled = state.currentPage <= 1;
