@@ -1,4 +1,4 @@
-const APP_CACHE_VERSION = "v1-7";
+const APP_CACHE_VERSION = "v1-8";
 const CACHE_NAME = `topik-words-cache-${APP_CACHE_VERSION}`;
 const ASSETS = [
   "./",

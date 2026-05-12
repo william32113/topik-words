@@ -1,4 +1,4 @@
-const APP_VERSION = "v1.7";
+const APP_VERSION = "v1.8";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
@@ -1370,7 +1370,14 @@ function promptForUpdate(worker) {
 }
 
 function applyPendingUpdate() {
-  if (!waitingServiceWorker) return;
+  if (!waitingServiceWorker) {
+    els.updateBannerText.textContent = "\u6b63\u5728\u91cd\u65b0\u8f09\u5165\u6700\u65b0\u7248\u672c...";
+    els.versionApplyUpdate?.classList.add("hidden");
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 120);
+    return;
+  }
   els.updateBannerText.textContent = "\u6b63\u5728\u66f4\u65b0\u5230\u6700\u65b0\u7248\u672c...";
   els.versionApplyUpdate?.classList.add("hidden");
   waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
