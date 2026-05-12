@@ -1,4 +1,4 @@
-const APP_VERSION = "v1.6";
+const APP_VERSION = "v1.7";
 const STORAGE_KEY = "topik-words-state-v3";
 const LEGACY_STORAGE_KEYS = ["topik-words-state-v2", "topik-words-state-v1"];
 const AUTO_UPDATE_KEY = "topik-words-auto-update";
@@ -227,7 +227,7 @@ async function init() {
 function renderVersionInfo() {
   els.currentVersion.textContent = APP_VERSION;
   els.latestVersion.textContent = latestAvailableVersion;
-  els.versionStatus.textContent = "??????????...";
+  els.versionStatus.textContent = "\u6b63\u5728\u78ba\u8a8d\u7dda\u4e0a\u6700\u65b0\u7248\u672c...";
   if (els.autoUpdateEnabled) {
     els.autoUpdateEnabled.checked = autoUpdateEnabled;
   }
@@ -254,8 +254,8 @@ async function loadLatestVersion() {
 
     syncVersionUpdateButton();
   } catch {
-    latestAvailableVersion = "????";
-    els.latestVersion.textContent = "????";
+    latestAvailableVersion = "\u7121\u6cd5\u78ba\u8a8d";
+    els.latestVersion.textContent = "\u7121\u6cd5\u78ba\u8a8d";
     els.versionStatus.textContent = getVersionStatusMessage("check-failed");
     syncVersionUpdateButton();
   }
@@ -264,7 +264,7 @@ async function loadLatestVersion() {
 function syncVersionUpdateButton() {
   if (!els.versionApplyUpdate) return;
   const shouldShow =
-    latestAvailableVersion !== APP_VERSION && latestAvailableVersion !== "????";
+    latestAvailableVersion !== APP_VERSION && latestAvailableVersion !== "\u7121\u6cd5\u78ba\u8a8d";
   els.versionApplyUpdate.classList.toggle("hidden", !shouldShow);
 }
 
@@ -751,7 +751,7 @@ function fallbackExample(word) {
 function buildExampleChinese(word) {
   const raw = String(word.exampleChinese || "").trim();
   if (!raw || raw === "-") {
-    return `???${word.chineseMeaning}???????`;
+    return `\u548c\u300c${word.chineseMeaning}\u300d\u6709\u95dc\u7684\u5e38\u7528\u53e5\u5b50\u3002`;
   }
   return raw.endsWith("?") ? raw : `${raw}?`;
 }
@@ -767,25 +767,25 @@ function openDetail(word) {
     <header class="detail-header">
       <p class="word-level">${levelLabels[word.level]}</p>
       <h2 id="overlayTitle" class="detail-korean">${word.korean}</h2>
-      <p class="detail-meta">${[word.pronunciation, word.partOfSpeech].filter(Boolean).join(" ? ")}</p>
+      <p class="detail-meta">${[word.pronunciation, word.partOfSpeech].filter(Boolean).join(" | ")}</p>
       <p class="detail-meaning">${word.chineseMeaning}</p>
     </header>
     <div class="detail-actions">
-      <button class="primary-button" id="detailSpeak" type="button">????</button>
-      <button class="ghost-button" id="detailExampleSpeak" type="button">????</button>
-      <button class="ghost-button" id="detailFavorite" type="button">${state.favorites.has(word.id) ? "????" : "????"}</button>
+      <button class="primary-button" id="detailSpeak" type="button">\u64ad\u653e\u55ae\u5b57\u767c\u97f3</button>
+      <button class="ghost-button" id="detailExampleSpeak" type="button">\u64ad\u653e\u4f8b\u53e5\u767c\u97f3</button>
+      <button class="ghost-button" id="detailFavorite" type="button">${state.favorites.has(word.id) ? "\u53d6\u6d88\u6536\u85cf" : "\u52a0\u5165\u6536\u85cf"}</button>
     </div>
     <section class="detail-block">
-      <h3>????</h3>
-      <p class="helper-text">??? ${progress.familiarity}/${MAX_FAMILIARITY} ? ??? ${progress.reviewCount} ? ? ${formatReviewState(progress)}</p>
+      <h3>\u5b78\u7fd2\u9032\u5ea6</h3>
+      <p class="helper-text">\u719f\u6089\u5ea6 ${progress.familiarity}/${MAX_FAMILIARITY} | \u7df4\u7fd2\u6b21\u6578 ${progress.reviewCount} \u6b21 | ${formatReviewState(progress)}</p>
       <div class="familiarity-row">
-        <button class="familiarity-button" type="button" data-score="0" data-word-id="${word.id}" data-action="set-hard">???</button>
-        <button class="familiarity-button" type="button" data-score="2" data-word-id="${word.id}" data-action="set-medium">??</button>
-        <button class="familiarity-button" type="button" data-score="4" data-word-id="${word.id}" data-action="set-good">??</button>
+        <button class="familiarity-button" type="button" data-score="0" data-word-id="${word.id}" data-action="set-hard">\u4e0d\u719f</button>
+        <button class="familiarity-button" type="button" data-score="2" data-word-id="${word.id}" data-action="set-medium">\u666e\u901a</button>
+        <button class="familiarity-button" type="button" data-score="4" data-word-id="${word.id}" data-action="set-good">\u719f\u6089</button>
       </div>
     </section>
     <section class="detail-block">
-      <h3>????</h3>
+      <h3>\u4f8b\u53e5</h3>
       <p>${example.korean}</p>
       <p class="detail-example">${example.chinese}</p>
     </section>
@@ -1360,8 +1360,8 @@ function promptForUpdate(worker) {
   waitingServiceWorker = worker;
   syncVersionUpdateButton();
   els.updateBannerText.textContent = autoUpdateEnabled
-    ? "?????????????????????????????"
-    : "?????????????????????";
+    ? "\u5df2\u5075\u6e2c\u5230\u65b0\u7248\u672c\uff0c\u6b63\u5728\u5617\u8a66\u81ea\u52d5\u66f4\u65b0\uff1b\u4f60\u4e5f\u53ef\u4ee5\u6309\u6309\u9215\u624b\u52d5\u66f4\u65b0\u3002"
+    : "\u6709\u65b0\u7248\u672c\u53ef\u66f4\u65b0\uff0c\u8acb\u6309\u4e00\u4e0b\u624b\u52d5\u5207\u63db\u5230\u6700\u65b0\u7248\u3002";
   els.updateBanner.classList.remove("hidden");
 
   if (autoUpdateEnabled) {
@@ -1371,7 +1371,7 @@ function promptForUpdate(worker) {
 
 function applyPendingUpdate() {
   if (!waitingServiceWorker) return;
-  els.updateBannerText.textContent = "?????????...";
+  els.updateBannerText.textContent = "\u6b63\u5728\u66f4\u65b0\u5230\u6700\u65b0\u7248\u672c...";
   els.versionApplyUpdate?.classList.add("hidden");
   waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
 }
